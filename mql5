@@ -1,0 +1,84 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                              Holy Moly.mq5      |
+//|                      Copyright 2022, Forex Robot Easy Team       |
+//|                                          forexroboteasy.com      |
+//+------------------------------------------------------------------+
+
+// Global variables
+int g_magicNumber = 123456; // Magic number to identify trades
+double g_lotSize = 0.1; // Initial lot size
+int g_stopLoss = 50; // Stop loss in pips
+int g_takeProfit = 100; // Take profit in pips
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+  // Check if our current position is profitable
+  if (PositionSelect() && PositionProfit() > 0)
+  {
+    // Close the position with take profit
+    PositionClose(PositionGetTicket(), g_takeProfit);
+  }
+  else
+  {
+    // Check if there is an opposite position
+    if (PositionSelect() && PositionGetInteger(POSITION_TYPE) != POSITION_TYPE_BUY)
+    {
+      // Close the opposite position
+      PositionClose(PositionGetTicket(), 0);
+    }
+    
+    // Check if we can open a new position
+    if (!PositionSelect())
+    {
+      // Open a new position with stop loss
+      int ticket = PositionOpen(POSITION_TYPE_BUY, Symbol(), g_lotSize, Ask, g_stopLoss, 0, 0, 'Holy Moly', g_magicNumber);
+      
+      // Check if position is opened successfully
+      if (ticket > 0)
+      {
+        // Print trade information
+        Print('Buy position opened with ticket: ', ticket);
+      }
+    }
+  }
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+  // Close all positions on deinitialization
+  for (int i = PositionsTotal() - 1; i >= 0; i--)
+  {
+    PositionSelectByIndex(i);
+    PositionClose(PositionGetTicket(), 0);
+  }
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void OnTimer()
+{
+  // Calculate the current equity
+  double equity = AccountEquity();
+  
+  // Check if equity is below 50% of the initial balance
+  if (equity < AccountBalance() * 0.5)
+  {
+    // Close all positions to limit losses
+    for (int i = PositionsTotal() - 1; i >= 0; i--)
+    {
+      PositionSelectByIndex(i);
+      PositionClose(PositionGetTicket(), 0);
+    }
+    
+    // Print a warning message
+    Print('Equity below 50% of initial balance. Closing all positions.');
+  }
+}
